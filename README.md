@@ -2,7 +2,7 @@
 
 Sistema de consulta sobre grafos de conocimiento utilizando técnicas de Machine Learning, NLP y algoritmos de búsqueda en grafos.
 
-## 📋 Descripción
+## Descripción
 
 Este proyecto implementa un pipeline completo que permite hacer consultas en lenguaje natural sobre un grafo de conocimiento y obtener respuestas razonadas siguiendo el flujo:
 
@@ -10,17 +10,17 @@ Este proyecto implementa un pipeline completo que permite hacer consultas en len
 
 ### Características principales:
 
-- ✅ **Procesamiento de lenguaje natural (NLP)** con spaCy
-- ✅ **Embeddings semánticos** multilingües (español e inglés)
-- ✅ **Extracción de entidades** (NER)
-- ✅ **Búsqueda de caminos** en grafos (BFS, DFS, shortest path)
-- ✅ **Visualización interactiva** con Plotly
-- ✅ **Sistema de consultas múltiples**
-- ✅ **Interfaz simple e intuitiva**
+- **Procesamiento de lenguaje natural (NLP)** con spaCy
+- **Embeddings semánticos** multilingües (español e inglés)
+- **Extracción de entidades** (NER)
+- **Búsqueda de caminos** en grafos (BFS, DFS, shortest path)
+- **Visualización interactiva** con Plotly
+- **Sistema de consultas múltiples**
+- **Interfaz simple e intuitiva**
 
 ---
 
-## 🚀 Inicio Rápido
+## Inicio Rápido
 
 ### Requisitos previos
 
@@ -50,7 +50,7 @@ El notebook instala automáticamente todas las dependencias necesarias:
 
 ---
 
-## 📖 Guía de Uso
+## Guía de Uso
 
 ### Opción 1: Consulta Interactiva
 
@@ -89,7 +89,7 @@ consultas_batch = [
 
 ---
 
-## 🎯 Ejemplos de Preguntas
+## Ejemplos de Preguntas
 
 Consulta el archivo `preguntas_ejemplo.txt` para ver más de 40 preguntas organizadas por categorías:
 
@@ -125,7 +125,7 @@ Consulta el archivo `preguntas_ejemplo.txt` para ver más de 40 preguntas organi
 
 ---
 
-## 🧠 Cómo Funciona el Pipeline
+## Cómo Funciona el Pipeline
 
 ### Etapa 1: Query Processing
 - **Tokenización**: Divide la consulta en tokens
@@ -150,20 +150,20 @@ Consulta el archivo `preguntas_ejemplo.txt` para ver más de 40 preguntas organi
 
 ---
 
-## 🎨 Visualización Interactiva
+## Visualización Interactiva
 
 El grafo interactivo incluye:
 
-- 🔴 **Nodos rojos**: Entidades más relevantes para la consulta
-- ⚫ **Nodos grises**: Otras entidades del grafo
-- 🔵 **Aristas azules gruesas**: Caminos encontrados por el Planner
-- ⚪ **Aristas grises**: Otras relaciones
-- 🖱️ **Hover**: Pasa el mouse para ver detalles de nodos y relaciones
-- 🔍 **Zoom/Pan**: Navega libremente por el grafo
+- **Nodos rojos**: Entidades más relevantes para la consulta
+- **Nodos grises**: Otras entidades del grafo
+- **Aristas azules gruesas**: Caminos encontrados por el Planner
+- **Aristas grises**: Otras relaciones
+- **Hover**: Pasa el mouse para ver detalles de nodos y relaciones
+- **Zoom/Pan**: Navega libremente por el grafo
 
 ---
 
-## ⚙️ Personalización del Grafo
+## Personalización del Grafo
 
 ### Agregar nuevos nodos
 
@@ -195,7 +195,7 @@ Después de modificar el grafo, re-ejecuta las celdas desde la Celda 5 en adelan
 
 ---
 
-## 📊 Estructura del Notebook
+## Estructura del Notebook
 
 | Celda | Sección | Descripción |
 |-------|---------|-------------|
@@ -214,7 +214,7 @@ Después de modificar el grafo, re-ejecuta las celdas desde la Celda 5 en adelan
 
 ---
 
-## 🔧 Parámetros Configurables
+## Parámetros Configurables
 
 ### `run_pipeline()`
 
@@ -235,7 +235,7 @@ results = run_pipeline(
 
 ---
 
-## 🌐 Soporte Multilingüe
+## Soporte Multilingüe
 
 El sistema está configurado para **español** por defecto, pero soporta múltiples idiomas:
 
@@ -256,41 +256,6 @@ nlp = spacy.load("en_core_web_sm")
 # Para francés
 nlp = spacy.load("fr_core_news_sm")
 ```
-
----
-
-## 📈 Mejoras Futuras
-
-- [ ] Integración con bases de datos externas
-- [ ] Soporte para grafos más grandes (>1000 nodos)
-- [ ] Algoritmos de path ranking más sofisticados
-- [ ] Cache de embeddings para mejor rendimiento
-- [ ] API REST para consultas remotas
-- [ ] Exportación de resultados a JSON/CSV
-- [ ] Dashboard web interactivo
-
----
-
-## 🤝 Contribuciones
-
-Sugerencias para extender el grafo:
-
-1. **Dominio tecnológico**: Agregar más empresas tech, productos, frameworks
-2. **Dominio científico**: Investigadores, papers, conceptos
-3. **Dominio empresarial**: Empresas, sectores, mercados
-4. **Dominio geográfico**: Países, ciudades, regiones
-
----
-
-## 📝 Licencia
-
-Proyecto educativo - Libre para uso académico y experimentación.
-
----
-
-## 📧 Contacto
-
-Para preguntas o sugerencias sobre el proyecto, consulta la documentación en el notebook.
 
 ---
 
