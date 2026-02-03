@@ -1,0 +1,4 @@
+id,nombre,email,ciudad,calificacion,productos_vendidos,especialidad
+A,Vendedor A,vendedorA@shop.com,Lima,4.8,150,Electronica y Accesorios
+B,Vendedor B,vendedorB@shop.com,Lima,4.6,200,Smartphones y Audio
+C,Vendedor C,vendedorC@shop.com,Arequipa,4.9,120,Monitores y Redes

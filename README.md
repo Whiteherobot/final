@@ -1,4 +1,203 @@
-# Pipeline de Consulta sobre Grafo de Conocimiento (NLP + ML)
+# Pipeline Transaccional con Neo4j y LLM
+
+Sistema de consulta transaccional sobre un grafo de conocimiento con datos reales. El flujo principal es:
+
+Query → Selection Function → Neo4j Execution → LLM Response
+
+## Estructura del proyecto
+
+```
+final/
+├── notebooks/
+│   ├── pipeline_transaccional_neo4j.ipynb
+│   └── kg_query_pipeline.ipynb
+├── model/
+│   └── funciones_sistema.py
+├── api/
+│   └── .gitkeep
+├── front/
+│   └── .gitkeep
+├── data/
+│   ├── olist/
+│   │   └── (archivos Kaggle Olist)
+│   ├── dataset_transaccional.csv
+│   └── dataset_vendedores.csv
+├── docs/
+│   ├── INSTRUCCIONES_VISUALIZACION.md
+│   ├── CELDA_VISUALIZACION.txt
+│   └── preguntas_ejemplo.txt
+├── scripts/
+│   ├── test_sistema.py
+│   └── download_kaggle_olist.py
+├── .env.example
+├── .env
+└── README.md
+```
+
+## Descripción del flujo
+
+1. Query del usuario
+2. Generación de embedding de la consulta
+3. Selección de función por similitud (Selection Function)
+4. Ejecución de consulta en Neo4j (Planner)
+5. Respuesta en lenguaje natural con Gemini
+
+## Tabla de funciones
+
+Las funciones del sistema están definidas en model/funciones_sistema.py con esta estructura:
+
+- id
+- nombre_funcion
+- descripcion
+- embedding
+- query_examples
+
+## Requisitos
+
+- Python 3.8 o superior
+- Neo4j corriendo en localhost:7687
+- API Key de Google Gemini
+
+## Configuración
+
+1. Copiar el archivo .env.example a .env
+2. Configurar credenciales de Neo4j y Google Gemini
+
+Ejemplo de .env:
+
+```
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=tu_password
+
+GOOGLE_API_KEY=tu_api_key
+```
+
+## Dataset Kaggle (recomendado)
+
+Dataset seleccionado:
+
+kartikeybartwal/ecomerce-product-recommendation-dataset
+
+Descarga automática con KaggleHub desde el notebook.
+
+Opcional: si no se puede descargar con KaggleHub, puedes usar Olist:
+
+olistbr/brazilian-ecommerce
+
+Para Olist:
+
+1. Instala Kaggle CLI: pip install kaggle
+2. Configura tus credenciales Kaggle (kaggle.json)
+3. Ejecuta: python scripts/download_kaggle_olist.py
+
+Si no hay datasets de Kaggle, se usa el dataset local en data/.
+
+## Ejecución
+
+1. Abrir notebooks/pipeline_transaccional_neo4j.ipynb
+2. Ejecutar celdas en orden
+3. Probar consultas como:
+   - ¿Cuánto cuesta el iPhone 14?
+   - ¿Quién vende laptops en Lima?
+   - ¿Hay stock de audífonos Sony?
+
+## Datos
+
+Los datos reales se encuentran en data/:
+
+- dataset_transaccional.csv (productos)
+- dataset_vendedores.csv (vendedores)
+
+## Notas
+
+- La selección de función se muestra de forma explícita en la sección 7.1 del notebook.
+- Si el modelo Gemini falla, el sistema devuelve un fallback con datos en JSON.# Pipeline Transaccional con Neo4j y LLM
+
+Sistema de consulta transaccional sobre un grafo de conocimiento con datos reales. El flujo principal es:
+
+Query → Selection Function → Neo4j Execution → LLM Response
+
+## Estructura del proyecto
+
+```
+final/
+├── notebooks/
+│   └── pipeline_transaccional_neo4j.ipynb
+├── model/
+│   └── funciones_sistema.py
+├── api/
+│   └── .gitkeep
+├── front/
+│   └── .gitkeep
+├── data/
+│   ├── dataset_transaccional.csv
+│   └── dataset_vendedores.csv
+├── .env.example
+├── .env
+├── test_sistema.py
+└── README.md
+```
+
+## Descripción del flujo
+
+1. Query del usuario
+2. Generación de embedding de la consulta
+3. Selección de función por similitud (Selection Function)
+4. Ejecución de consulta en Neo4j (Planner)
+5. Respuesta en lenguaje natural con Gemini
+
+## Tabla de funciones
+
+Las funciones del sistema están definidas en model/funciones_sistema.py con esta estructura:
+
+- id
+- nombre_funcion
+- descripcion
+- embedding
+- query_examples
+
+## Requisitos
+
+- Python 3.8 o superior
+- Neo4j corriendo en localhost:7687
+- API Key de Google Gemini
+
+## Configuración
+
+1. Copiar el archivo .env.example a .env
+2. Configurar credenciales de Neo4j y Google Gemini
+
+Ejemplo de .env:
+
+```
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=tu_password
+
+GOOGLE_API_KEY=tu_api_key
+```
+
+## Ejecución
+
+1. Abrir notebooks/pipeline_transaccional_neo4j.ipynb
+2. Ejecutar celdas en orden
+3. Probar consultas como:
+   - ¿Cuánto cuesta el iPhone 14?
+   - ¿Quién vende laptops en Lima?
+   - ¿Hay stock de audífonos Sony?
+
+## Datos
+
+Los datos reales se encuentran en data/:
+
+- dataset_transaccional.csv (productos)
+- dataset_vendedores.csv (vendedores)
+
+## Notas
+
+- La selección de función se muestra de forma explícita en la sección 7.1 del notebook.
+- Si el modelo Gemini falla, el sistema devuelve un fallback con datos en JSON.# Pipeline de Consulta sobre Grafo de Conocimiento (NLP + ML)
 
 Sistema de consulta sobre grafos de conocimiento utilizando técnicas de Machine Learning, NLP y algoritmos de búsqueda en grafos.
 

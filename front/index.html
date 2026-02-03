@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>E-Commerce Transaccional</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <main class="container">
+    <header class="header">
+      <h1>E-Commerce Transaccional</h1>
+      <p>Sistema inteligente de consultas y compras de productos.</p>
+    </header>
+
+    <!-- SECCIÓN DE CONSULTAS -->
+    <section class="card">
+      <h2>Consultar Productos</h2>
+      <label for="query">¿Qué buscas?</label>
+      <textarea id="query" rows="3" placeholder="Ejemplo: ¿Qué laptops hay? ¿Cuánto cuesta el iPhone?"></textarea>
+      <button id="send">Buscar Producto</button>
+      <div id="status" class="status"></div>
+    </section>
+
+    <!-- RESPUESTA -->
+    <section class="card">
+      <h2>Respuesta</h2>
+      <div id="answer" class="answer">Aún no hay resultados.</div>
+      <div class="meta">
+        <span id="function-label" class="chip">Función: -</span>
+        <span id="confidence-label" class="chip">Confianza: -</span>
+      </div>
+    </section>
+
+    <!-- PRODUCTOS (solo para búsquedas de producto) -->
+    <section class="card" id="resultados-section" style="display: none;">
+      <h2>Productos Disponibles</h2>
+      <div id="productos-lista" class="productos-grid">
+        <!-- Los productos se cargarán aquí dinámicamente -->
+      </div>
+    </section>
+
+    <!-- CARRITO DE COMPRAS -->
+    <section class="card carrito-section">
+      <h2>Carrito de Compras</h2>
+      <div id="carrito-items" class="carrito-items">
+        <p class="carrito-vacio">El carrito está vacío</p>
+      </div>
+      <div class="carrito-resumen" id="carrito-resumen" style="display: none;">
+        <div class="total-carrito">
+          <span>Total:</span>
+          <span id="total-precio">$0.00</span>
+        </div>
+        <button id="btn-comprar" class="btn-comprar">Realizar Compra</button>
+      </div>
+    </section>
+
+    <!-- HISTORIAL DE PEDIDOS -->
+    <section class="card">
+      <h2>Historial de Pedidos</h2>
+      <div id="historial-pedidos" class="historial-pedidos">
+        <p class="sin-pedidos">No hay pedidos realizados aún.</p>
+      </div>
+    </section>
+
+    <!-- MODAL DE CONFIRMACIÓN -->
+    <div id="modal-confirmacion" class="modal" style="display: none;">
+      <div class="modal-contenido">
+        <span class="modal-cerrar">&times;</span>
+        <h2>Confirmar Compra</h2>
+        <div id="modal-resumen" class="modal-resumen"></div>
+        <div class="modal-botones">
+          <button id="btn-cancelar" class="btn-cancelar">Cancelar</button>
+          <button id="btn-confirmar" class="btn-confirmar">Confirmar Pedido</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN DE DETALLES TÉCNICOS -->
+    <section class="card">
+      <h2>Detalles Tecnicos</h2>
+      <pre id="details" class="details">Sin datos.</pre>
+    </section>
+  </main>
+
+  <script src="/static/app.js?v=2"></script>
+</body>
+</html>

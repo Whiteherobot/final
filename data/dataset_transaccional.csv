@@ -1,0 +1,28 @@
+id,tipo,nombre,categoria,precio,stock,vendedor,ubicacion,descripcion
+1,producto,Laptop Dell XPS 15,Electronica,1299.99,25,Vendedor A,Lima,Laptop de alto rendimiento con procesador Intel i7
+2,producto,iPhone 14 Pro,Electronica,999.99,50,Vendedor B,Lima,Smartphone Apple con camara de 48MP
+3,producto,Samsung Galaxy S23,Electronica,849.99,30,Vendedor B,Arequipa,Smartphone Android con pantalla AMOLED
+4,producto,Mouse Logitech MX,Accesorios,79.99,100,Vendedor A,Lima,Mouse inalambrico ergonomico
+5,producto,Teclado Mecanico,Accesorios,129.99,60,Vendedor A,Cusco,Teclado mecanico RGB retroiluminado
+6,producto,Monitor LG 27,Electronica,299.99,40,Vendedor C,Lima,Monitor 4K de 27 pulgadas
+7,producto,Audifonos Sony WH-1000XM5,Audio,349.99,35,Vendedor B,Lima,Audifonos con cancelacion de ruido activa
+8,producto,MacBook Pro 14,Electronica,1999.99,15,Vendedor C,Lima,Laptop Apple con chip M2 Pro
+9,producto,iPad Air,Electronica,599.99,45,Vendedor B,Arequipa,Tablet Apple de 10.9 pulgadas
+10,producto,SSD Samsung 1TB,Almacenamiento,119.99,80,Vendedor A,Cusco,Disco solido de alta velocidad
+11,producto,Webcam Logitech C920,Accesorios,89.99,55,Vendedor C,Lima,Camara web Full HD 1080p
+12,producto,Impresora HP LaserJet,Oficina,249.99,20,Vendedor A,Lima,Impresora laser monocromatica
+13,producto,Router TP-Link AX3000,Redes,149.99,65,Vendedor C,Arequipa,Router WiFi 6 de alta velocidad
+14,producto,Cable HDMI 2.1,Accesorios,19.99,200,Vendedor B,Cusco,Cable HDMI 4K de 2 metros
+15,producto,Memoria RAM DDR5 32GB,Componentes,189.99,40,Vendedor A,Lima,Memoria RAM de alto rendimiento
+16,producto,Laptop HP Spectre x360,Electronica,1399.99,18,Vendedor A,Lima,Laptop convertible 2 en 1 con pantalla tactil
+17,producto,Laptop Lenovo ThinkPad X1,Electronica,1599.99,12,Vendedor C,Arequipa,Laptop empresarial ultraligera con gran autonomia
+18,producto,Laptop ASUS ROG Zephyrus,Electronica,1799.99,10,Vendedor B,Lima,Laptop gamer con GPU dedicada y 144Hz
+19,producto,Laptop Acer Swift 5,Electronica,1099.99,20,Vendedor A,Cusco,Laptop ultradelgada para productividad
+20,producto,Laptop MSI Creator 15,Electronica,1899.99,8,Vendedor C,Lima,Laptop para creadores con pantalla 4K
+21,producto,iPhone 15,Electronica,1099.99,35,Vendedor B,Lima,Smartphone Apple con chip A17 y camara mejorada
+22,producto,iPhone 13,Electronica,799.99,40,Vendedor A,Arequipa,Smartphone Apple con pantalla OLED
+23,producto,Samsung Galaxy S24,Electronica,999.99,28,Vendedor B,Arequipa,Smartphone Android con IA integrada
+24,producto,Samsung Galaxy A54,Electronica,449.99,60,Vendedor C,Cusco,Smartphone Android gama media con buena bateria
+25,producto,Xiaomi Redmi Note 13,Electronica,299.99,75,Vendedor A,Lima,Smartphone Android con camara de 108MP
+26,producto,Motorola Edge 40,Electronica,549.99,32,Vendedor C,Lima,Smartphone Android con carga rapida
+27,producto,Google Pixel 8,Electronica,899.99,22,Vendedor B,Lima,Smartphone Android con camara computacional
