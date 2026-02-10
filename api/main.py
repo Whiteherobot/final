@@ -11,6 +11,8 @@ import google.generativeai as genai
 import os
 import json
 import re
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langgraph.graph import StateGraph, END
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, List
@@ -53,6 +55,16 @@ except Exception as e:
     print("  El API funcionará con vectores simulados")
     embedder = None
 
+# Embeddings LangChain (modelo explícito)
+LC_EMBEDDING_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+langchain_embedder = None
+try:
+    langchain_embedder = HuggingFaceEmbeddings(model_name=LC_EMBEDDING_MODEL)
+    print(f"[OK] LangChain embeddings: {LC_EMBEDDING_MODEL}")
+except Exception as e:
+    print(f"[WARN] LangChain embeddings no disponibles: {e}")
+    langchain_embedder = None
+
 # Intentar conectar a Neo4j, pero continuar si no está disponible
 driver = None
 try:
@@ -74,6 +86,7 @@ class QueryResponse(BaseModel):
     answer: str
     action: Optional[str] = None
     cart_items: Optional[List[dict]] = None
+    logs: Optional[List[str]] = None
 
 class PedidoItem(BaseModel):
     producto: str
@@ -166,7 +179,11 @@ except Exception as e:
     df_vendedores = None
 
 # Generar embeddings solo si el modelo está disponible
-if embedder:
+if langchain_embedder:
+    for funcion in FUNCIONES_SISTEMA:
+        texto = f"{funcion['nombre_funcion']}: {funcion['descripcion']}. Ejemplos: {', '.join(funcion['query_examples'])}"
+        funcion["embedding"] = langchain_embedder.embed_query(texto)
+elif embedder:
     for funcion in FUNCIONES_SISTEMA:
         texto = f"{funcion['nombre_funcion']}: {funcion['descripcion']}. Ejemplos: {', '.join(funcion['query_examples'])}"
         funcion["embedding"] = embedder.encode(texto)
@@ -177,7 +194,7 @@ else:
 
 
 def seleccionar_funcion(query: str):
-    """Retorna tupla (nombre_funcion, similitud)"""
+    """Retorna tupla (nombre_funcion, similitud, ruta)"""
     q = query.lower()
 
     product_keywords = [
@@ -200,30 +217,38 @@ def seleccionar_funcion(query: str):
     has_customer = any(k in q for k in customer_keywords)
 
     if has_customer:
-        return ("consultar_clientes", 1.0)
+        return ("consultar_clientes", 1.0, "keyword:clientes")
     # Si hay stock y no hay producto específico, ir a stock
     if has_stock and not has_specific_product and not has_vendor:
-        return ("verificar_stock", 1.0)
+        return ("verificar_stock", 1.0, "keyword:stock")
     # Priorizar producto si hay intención de producto específica
     if has_product and not has_vendor:
-        return ("buscar_producto", 1.0)
+        return ("buscar_producto", 1.0, "keyword:producto")
     if has_vendor and not has_product:
-        return ("buscar_vendedor", 1.0)
+        return ("buscar_vendedor", 1.0, "keyword:vendedor")
     if has_stock:
-        return ("verificar_stock", 1.0)
+        return ("verificar_stock", 1.0, "keyword:stock")
 
-    # Si embedder está disponible, usar similitud; si no, usar fallback
-    if embedder:
+    # Si LangChain está disponible, usar embeddings semánticos
+    if langchain_embedder:
+        emb = langchain_embedder.embed_query(query)
+        scores = []
+        for f in FUNCIONES_SISTEMA:
+            sim = float(cosine_similarity([emb], [f["embedding"]])[0][0])
+            scores.append((f["nombre_funcion"], sim))
+        scores.sort(key=lambda x: x[1], reverse=True)
+        return (scores[0][0], scores[0][1], "embedding:langchain")
+    elif embedder:
         emb = embedder.encode(query)
         scores = []
         for f in FUNCIONES_SISTEMA:
             sim = float(cosine_similarity([emb], [f["embedding"]])[0][0])
             scores.append((f["nombre_funcion"], sim))
         scores.sort(key=lambda x: x[1], reverse=True)
-        return (scores[0][0], scores[0][1])
+        return (scores[0][0], scores[0][1], "embedding:sentence-transformers")
     else:
         # Fallback: retornar función por defecto con baja similitud
-        return ("buscar_producto", 0.5)
+        return ("buscar_producto", 0.5, "fallback:default")
 
 
 def run_query(cypher: str, params=None):
@@ -276,6 +301,108 @@ def _normalizar_tokens(query: str):
         if t.endswith("s") and len(t) > 3:
             normalized_tokens.append(t[:-1])
     return list(dict.fromkeys(normalized_tokens))
+
+
+def log_step(logs: list, message: str):
+    logs.append(message)
+    print(message)
+
+
+def detect_smalltalk(query: str):
+    q = (query or "").lower().strip()
+    if any(s in q for s in ["buenos dias", "buenos días"]):
+        return "¡Buenos días! ¿Qué producto deseas consultar?"
+    if any(s in q for s in ["buenas tardes"]):
+        return "¡Buenas tardes! ¿Necesitas ayuda con productos o pedidos?"
+    if any(s in q for s in ["buenas noches"]):
+        return "¡Buenas noches! Estoy aquí para ayudarte con consultas y pedidos."
+    if any(s in q for s in ["como estas", "cómo estás"]):
+        return "Estoy muy bien, gracias. ¿En qué te ayudo hoy?"
+    if any(s in q for s in ["necesito ayuda", "ocupo ayuda", "tengo una duda", "necesito algo"]):
+        return "Claro, dime tu duda y te ayudo."
+    if any(s in q for s in ["tal vez estan atendiendo", "tal vez están atendiendo"]):
+        return "Sí, estoy atendiendo. ¿Qué necesitas?"
+    if any(s in q for s in ["hola", "buenas", "que tal", "qué tal"]):
+        return "Hola, ¿en qué puedo ayudarte?"
+    return None
+
+
+def build_plan(selected_function: str, has_order: bool = False):
+    base = ["explorar_grafo"]
+    if has_order:
+        return base + ["buscar_producto", "agregar_carrito"]
+    if selected_function in {"buscar_producto", "verificar_stock", "buscar_vendedor", "consultar_clientes"}:
+        return base + [selected_function]
+    return base + ["buscar_producto"]
+
+
+def run_plan_with_langgraph(plan: list, query: str, logs: list):
+    """Ejecuta un plan secuencial usando LangGraph y retorna resultados."""
+    state = {"query": query, "results": [], "logs": logs, "plan": plan}
+    graph = StateGraph(dict)
+
+    def _node_buscar_producto(s):
+        log_step(s["logs"], "step: buscar_producto")
+        s["results"] = buscar_producto(s["query"])
+        return s
+
+    def _node_verificar_stock(s):
+        log_step(s["logs"], "step: verificar_stock")
+        s["results"] = verificar_stock(s["query"])
+        return s
+
+    def _node_buscar_vendedor(s):
+        log_step(s["logs"], "step: buscar_vendedor")
+        s["results"] = buscar_vendedor(s["query"])
+        return s
+
+    def _node_consultar_clientes(s):
+        log_step(s["logs"], "step: consultar_clientes")
+        s["results"] = consultar_clientes(s["query"])
+        return s
+
+    def _node_agregar_carrito(s):
+        log_step(s["logs"], "step: agregar_carrito")
+        return s
+
+    def _node_explorar_grafo(s):
+        log_step(s["logs"], "step: explorar_grafo")
+        if driver:
+            try:
+                with driver.session() as session:
+                    session.run("MATCH (n) RETURN count(n) as total")
+                    log_step(s["logs"], "log: exploración Neo4j OK")
+            except Exception as e:
+                log_step(s["logs"], f"log: exploración Neo4j falló ({e})")
+        else:
+            log_step(s["logs"], "log: Neo4j no disponible")
+        return s
+
+    node_map = {
+        "explorar_grafo": _node_explorar_grafo,
+        "buscar_producto": _node_buscar_producto,
+        "verificar_stock": _node_verificar_stock,
+        "buscar_vendedor": _node_buscar_vendedor,
+        "consultar_clientes": _node_consultar_clientes,
+        "agregar_carrito": _node_agregar_carrito,
+    }
+
+    # Construcción secuencial explícita
+    prev = None
+    for idx, step in enumerate(plan):
+        name = f"step_{idx}_{step}"
+        graph.add_node(name, node_map.get(step, _node_buscar_producto))
+        if prev is None:
+            graph.set_entry_point(name)
+        else:
+            graph.add_edge(prev, name)
+        prev = name
+    if prev:
+        graph.add_edge(prev, END)
+
+    app = graph.compile()
+    result = app.invoke(state)
+    return result
 
 
 def parse_order_intent(query: str):
@@ -464,8 +591,12 @@ def consultar_clientes(_: str):
     return get_mock_data("clientes")
 
 
-def generar_respuesta(query: str, funcion: str, datos: list):
+def generar_respuesta(query: str, funcion: str, datos: list, logs: Optional[list] = None):
     """Genera respuesta usando Google Gemini con fallback robusto"""
+    def _log(message: str):
+        if logs is not None:
+            log_step(logs, message)
+
     if not datos:
         return "No se encontraron resultados en la base de datos."
 
@@ -503,9 +634,11 @@ Responde de forma natural y concisa (máximo 3 líneas) mencionando los producto
                 modelo = None
 
             if not modelo:
+                _log("llm_model: fallback (sin modelo Gemini disponible)")
                 return _generar_respuesta_fallback(query, funcion, datos)
 
             model = genai.GenerativeModel(modelo)
+            _log(f"llm_model: {modelo}")
             response = model.generate_content(prompt)
             
             if response and response.text:
@@ -513,10 +646,12 @@ Responde de forma natural y concisa (máximo 3 líneas) mencionando los producto
             else:
                 return f"Se encontraron {len(datos)} resultados: {list(datos[0].values())[0]}"
         except Exception:
+            _log("llm_model: fallback (error Gemini)")
             # Fallback: generar respuesta simple
             return _generar_respuesta_fallback(query, funcion, datos)
     else:
         # Sin API key, usar fallback directamente
+        _log("llm_model: fallback (sin API key)")
         return _generar_respuesta_fallback(query, funcion, datos)
 
 
@@ -647,11 +782,38 @@ def query(req: QueryRequest):
     if not req.query:
         raise HTTPException(status_code=400, detail="Query vacia")
 
+    logs = []
+    log_step(logs, f"input: {req.query}")
+    if langchain_embedder:
+        log_step(logs, f"embedding_model: {LC_EMBEDDING_MODEL} (langchain)")
+    elif embedder:
+        log_step(logs, "embedding_model: paraphrase-multilingual-MiniLM-L12-v2 (sentence-transformers)")
+    else:
+        log_step(logs, "embedding_model: simulated")
+
+    # Respuesta a smalltalk
+    smalltalk = detect_smalltalk(req.query)
+    if smalltalk:
+        log_step(logs, "step: smalltalk")
+        return {
+            "query": req.query,
+            "function": "smalltalk",
+            "similitud": 1.0,
+            "results": [],
+            "answer": smalltalk,
+            "action": "smalltalk",
+            "cart_items": [],
+            "logs": logs,
+        }
+
     # Intento de agregar al carrito por texto
     order_items = parse_order_intent(req.query)
     if order_items:
         producto = order_items[0].get("producto")
         cantidad = order_items[0].get("cantidad")
+        log_step(logs, "step: plan -> buscar_producto() -> agregar_carrito()")
+        plan = build_plan("buscar_producto", has_order=True)
+        run_plan_with_langgraph(plan, req.query, logs)
         answer = f"Agregué {cantidad} unidad(es) de {producto} al carrito."
         return {
             "query": req.query,
@@ -661,9 +823,16 @@ def query(req: QueryRequest):
             "answer": answer,
             "action": "add_to_cart",
             "cart_items": order_items,
+            "logs": logs,
         }
 
-    funcion, similitud = seleccionar_funcion(req.query)
+    funcion, similitud, ruta = seleccionar_funcion(req.query)
+    log_step(logs, f"router: {ruta}")
+    log_step(logs, f"step: seleccionar_funcion -> {funcion} (sim={similitud:.2f})")
+
+    plan = build_plan(funcion)
+    log_step(logs, f"plan: {plan}")
+    run_plan_with_langgraph(plan, req.query, logs)
 
     if funcion == "buscar_producto":
         results = buscar_producto(req.query)
@@ -674,7 +843,11 @@ def query(req: QueryRequest):
     else:
         results = verificar_stock(req.query)
 
-    answer = generar_respuesta(req.query, funcion, results)
+    answer = generar_respuesta(req.query, funcion, results, logs=logs)
+    if results:
+        answer = f"Solicitud exitosa. {answer}"
+    else:
+        answer = f"Solicitud fallida. {answer}"
 
     return {
         "query": req.query,
@@ -682,6 +855,9 @@ def query(req: QueryRequest):
         "similitud": similitud,
         "results": results,
         "answer": answer,
+        "action": "none",
+        "cart_items": [],
+        "logs": logs,
     }
 
 @app.get("/")

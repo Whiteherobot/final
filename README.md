@@ -1,5 +1,48 @@
 # Pipeline Transaccional con Neo4j y LLM
 
+## Resumen
+Sistema de consultas y pedidos en lenguaje natural sobre un grafo de conocimiento y datasets transaccionales, con selección de funciones por embeddings y respuesta en lenguaje humano.
+
+## Stack de librerías y tecnologías usadas
+- FastAPI
+- Neo4j
+- LangChain (embeddings)
+- LangGraph (planificación)
+- Sentence Transformers
+- scikit-learn
+- Google Gemini
+- Pandas
+
+## Flujo del proceso del agente (paso a paso)
+1. El usuario ingresa una query.
+2. Se generan embeddings del query con LangChain.
+3. Se selecciona la función por similitud semántica.
+4. Se crea un plan secuencial con LangGraph.
+5. Se ejecutan funciones paso a paso (con logs).
+6. Se responde en lenguaje natural y se confirma éxito/fallo.
+
+## Diagrama del flujo usando Mermaid
+```mermaid
+flowchart TD
+   A[Input: Query del usuario] --> B[Embeddings LangChain]
+   B --> C[Selección de función por similitud]
+   C --> D[Plan LangGraph]
+   D --> E[Ejecución secuencial de funciones]
+   E --> F[Respuesta natural + confirmación]
+```
+
+## Explicación del diagrama
+El sistema toma la query, genera embeddings, elige la función más adecuada, construye un plan secuencial y ejecuta cada paso con logs hasta producir una respuesta clara.
+
+## Conclusiones
+El proyecto implementa un flujo de agente verificable con embeddings, planificación y ejecución secuencial orientada a consultas y pedidos.
+
+## Autores
+- MLata
+
+## Información de contacto
+- Email: mlata@example.com
+
 Sistema de consulta transaccional sobre un grafo de conocimiento con datos reales. El flujo principal es:
 
 Query → Selection Function → Neo4j Execution → LLM Response

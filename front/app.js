@@ -6,6 +6,11 @@ const sendButton = document.getElementById("send");
 const statusEl = document.getElementById("status");
 const answerEl = document.getElementById("answer");
 const detailsEl = document.getElementById("details");
+const graphStatusEl = document.getElementById("graph-status");
+const graphToolEl = document.getElementById("graph-tool");
+const graphTraceEl = document.getElementById("graph-trace");
+const graphCanvas = document.getElementById("graph-canvas");
+const traceListEl = document.getElementById("trace-list");
 const functionLabel = document.getElementById("function-label");
 const confidenceLabel = document.getElementById("confidence-label");
 const resultadosSection = document.getElementById("resultados-section");
@@ -49,6 +54,209 @@ window.addEventListener("click", (e) => {
   }
 });
 
+function renderLogs(logs, fallbackText = "Sin datos.") {
+  if (Array.isArray(logs) && logs.length > 0) {
+    detailsEl.textContent = logs.join("\n");
+  } else {
+    detailsEl.textContent = fallbackText;
+  }
+}
+
+function parseTrace(logs) {
+  if (!Array.isArray(logs)) {
+    return [];
+  }
+  const trace = [];
+  logs.forEach((log) => {
+    if (log.startsWith("step:")) {
+      trace.push({ label: log.replace("step:", "Paso:").trim(), state: "done" });
+    } else if (log.startsWith("router:")) {
+      trace.push({ label: log.replace("router:", "Router:").trim(), state: "pending" });
+    } else if (log.startsWith("plan:")) {
+      trace.push({ label: log.replace("plan:", "Plan:").trim(), state: "pending" });
+    } else if (log.startsWith("embedding_model:")) {
+      trace.push({ label: log.replace("embedding_model:", "Modelo:").trim(), state: "pending" });
+    } else if (log.startsWith("llm_model:")) {
+      trace.push({ label: log.replace("llm_model:", "LLM:").trim(), state: "pending" });
+    } else if (log.startsWith("log:")) {
+      trace.push({ label: log.replace("log:", "Info:").trim(), state: "done" });
+    }
+  });
+  return trace;
+}
+
+function renderTrace(logs) {
+  if (!traceListEl) {
+    return;
+  }
+  traceListEl.innerHTML = "";
+  const trace = parseTrace(logs);
+  if (trace.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "trace-item";
+    empty.textContent = "Sin actividad.";
+    traceListEl.appendChild(empty);
+    return;
+  }
+
+  trace.forEach((entry) => {
+    const item = document.createElement("div");
+    item.className = `trace-item ${entry.state}`;
+    item.textContent = entry.label;
+    traceListEl.appendChild(item);
+  });
+}
+
+function setGraphStatus(state, toolLabel = "-") {
+  if (!graphStatusEl) {
+    return;
+  }
+  graphStatusEl.classList.remove("active", "done");
+  if (state === "active") {
+    graphStatusEl.textContent = "EN PROCESO";
+    graphStatusEl.classList.add("active");
+  } else if (state === "done") {
+    graphStatusEl.textContent = "LISTO";
+    graphStatusEl.classList.add("done");
+  } else {
+    graphStatusEl.textContent = "EN ESPERA";
+  }
+
+  if (graphToolEl) {
+    graphToolEl.textContent = toolLabel || "-";
+  }
+
+  if (graphTraceEl) {
+    graphTraceEl.textContent = state === "active" ? "ejecutando" : state === "done" ? "completado" : "-";
+  }
+}
+
+function resetGraph() {
+  if (!graphCanvas) {
+    return;
+  }
+  graphCanvas.querySelectorAll(".graph-node").forEach((node) => node.classList.remove("active"));
+  graphCanvas.querySelectorAll(".graph-edge").forEach((edge) => edge.classList.remove("active"));
+}
+
+function activateGraphNode(name) {
+  if (!graphCanvas) {
+    return;
+  }
+  const node = graphCanvas.querySelector(`.graph-node[data-node="${name}"]`);
+  if (node) {
+    node.classList.add("active");
+  }
+}
+
+function activateGraphEdge(from, to) {
+  if (!graphCanvas) {
+    return;
+  }
+  const direct = graphCanvas.querySelector(`.graph-edge[data-edge="${from}-${to}"]`);
+  const reverse = graphCanvas.querySelector(`.graph-edge[data-edge="${to}-${from}"]`);
+  const edge = direct || reverse;
+  if (edge) {
+    edge.classList.add("active");
+  }
+}
+
+function buildGraphSteps(logs) {
+  const steps = ["consulta"];
+  if (!Array.isArray(logs)) {
+    return steps;
+  }
+
+  const addStep = (name) => {
+    if (!steps.includes(name)) {
+      steps.push(name);
+    }
+  };
+
+  logs.forEach((log) => {
+    const lower = log.toLowerCase();
+    if (lower.startsWith("router:")) {
+      addStep("router");
+    }
+
+    if (lower.startsWith("embedding_model:")) {
+      addStep("embedding");
+    }
+
+    if (lower.startsWith("plan:")) {
+      addStep("planner");
+    }
+
+    if (lower.startsWith("step:")) {
+      if (lower.includes("smalltalk")) {
+        addStep("smalltalk");
+      }
+      if (lower.includes("buscar_producto") || lower.includes("verificar_stock")) {
+        addStep("neo4j");
+        addStep("productos");
+      }
+      if (lower.includes("buscar_vendedor")) {
+        addStep("neo4j");
+        addStep("vendedor");
+      }
+      if (lower.includes("consultar_clientes") || lower.includes("explorar_grafo")) {
+        addStep("neo4j");
+      }
+      if (lower.includes("agregar_carrito")) {
+        addStep("neo4j");
+        addStep("carrito");
+      }
+    }
+
+    if (lower.startsWith("llm_model:")) {
+      addStep("llm");
+    }
+  });
+
+  if (!steps.includes("respuesta")) {
+    steps.push("respuesta");
+  }
+
+  return steps;
+}
+
+function animateGraphFromLogs(logs) {
+  resetGraph();
+  const sequence = buildGraphSteps(logs);
+  if (sequence.length === 0) {
+    activateGraphNode("consulta");
+    return;
+  }
+
+  const labels = {
+    consulta: "Consulta",
+    router: "Router",
+    embedding: "Embeddings",
+    planner: "Planificación",
+    neo4j: "Consulta Neo4j",
+    productos: "Productos",
+    vendedor: "Vendedor",
+    carrito: "Carrito",
+    llm: "LLM",
+    respuesta: "Respuesta",
+    smalltalk: "Smalltalk"
+  };
+
+  sequence.forEach((step, i) => {
+    setTimeout(() => {
+      activateGraphNode(step);
+      const prev = sequence[i - 1];
+      if (prev) {
+        activateGraphEdge(prev, step);
+      }
+      if (graphTraceEl) {
+        const label = labels[step] || step;
+        graphTraceEl.textContent = `${label} (${i + 1}/${sequence.length})`;
+      }
+    }, 220 * (i + 1));
+  });
+}
+
 // BÚSQUEDA DE PRODUCTOS
 async function sendQuery() {
   const query = queryInput.value.trim();
@@ -57,10 +265,70 @@ async function sendQuery() {
     return;
   }
 
+  // Smalltalk en frontend (respuestas naturales sin depender de funciones)
+  const lower = query.toLowerCase();
+  const smalltalkTriggers = [
+    "hola",
+    "como estas",
+    "cómo estás",
+    "buenos dias",
+    "buenos días",
+    "buenas tardes",
+    "buenas noches",
+    "necesito ayuda",
+    "necesito algo",
+    "ocupo ayuda",
+    "tengo una duda",
+    "tal vez estan atendiendo",
+    "tal vez están atendiendo"
+  ];
+
+  if (smalltalkTriggers.some((t) => lower.includes(t))) {
+    setGraphStatus("done", "smalltalk");
+    animateGraphFromLogs([
+      "router: frontend_smalltalk",
+      "step: smalltalk"
+    ]);
+    let respuesta = "Hola, ¿en qué puedo ayudarte?";
+    if (lower.includes("buenos dias") || lower.includes("buenos días")) {
+      respuesta = "¡Buenos días! ¿Qué producto deseas consultar?";
+    } else if (lower.includes("buenas tardes")) {
+      respuesta = "¡Buenas tardes! ¿Necesitas ayuda con productos o pedidos?";
+    } else if (lower.includes("buenas noches")) {
+      respuesta = "¡Buenas noches! Estoy aquí para ayudarte con consultas y pedidos.";
+    } else if (lower.includes("como estas") || lower.includes("cómo estás")) {
+      respuesta = "Estoy muy bien, gracias. ¿En qué te ayudo hoy?";
+    } else if (lower.includes("necesito ayuda") || lower.includes("ocupo ayuda") || lower.includes("tengo una duda") || lower.includes("necesito algo")) {
+      respuesta = "Claro, dime tu duda y te ayudo.";
+    } else if (lower.includes("tal vez estan atendiendo") || lower.includes("tal vez están atendiendo")) {
+      respuesta = "Sí, estoy atendiendo. ¿Qué necesitas?";
+    } else if (lower.includes("hola") || lower.includes("buenas") || lower.includes("que tal") || lower.includes("qué tal")) {
+      respuesta = "Hola, ¿en qué puedo ayudarte?";
+    }
+    answerEl.textContent = respuesta;
+    functionLabel.textContent = "Función: smalltalk";
+    confidenceLabel.textContent = "Confianza: 1.00";
+    renderLogs([
+      `input: ${query}`,
+      "router: frontend_smalltalk",
+      "step: smalltalk"
+    ]);
+    renderTrace([
+      "router: frontend_smalltalk",
+      "step: smalltalk"
+    ]);
+    resultadosSection.style.display = "none";
+    statusEl.textContent = "Listo.";
+    return;
+  }
+
   sendButton.disabled = true;
   statusEl.textContent = "Consultando...";
   answerEl.textContent = "";
   productosLista.innerHTML = "";
+  setGraphStatus("active", "-");
+  resetGraph();
+  activateGraphNode("consulta");
 
   try {
     const res = await fetch(apiUrl + "/query", {
@@ -81,15 +349,11 @@ async function sendQuery() {
     const conf = typeof data.similitud === "number" ? data.similitud.toFixed(2) : "N/A";
     confidenceLabel.textContent = `Confianza: ${conf}`;
     
-    // Mostrar detalles técnicos
-    const details = {
-      "Función seleccionada": data.function,
-      "Similitud": data.similitud || "N/A",
-      "Resultados encontrados": data.results.length,
-      "Acción": data.action || "-",
-      "Detalles": data.results
-    };
-    detailsEl.textContent = JSON.stringify(details, null, 2);
+    // Mostrar logs avanzados
+    renderLogs(data.logs, "Sin logs disponibles.");
+    renderTrace(data.logs);
+    setGraphStatus("done", data.function || "-");
+    animateGraphFromLogs(data.logs);
 
     // Si la respuesta indica agregar al carrito
     if (data.action === "add_to_cart" && Array.isArray(data.cart_items)) {
@@ -110,7 +374,10 @@ async function sendQuery() {
   } catch (err) {
     statusEl.textContent = "Error al consultar la API.";
     answerEl.textContent = "Error: " + String(err);
-    detailsEl.textContent = String(err);
+    renderLogs([], String(err));
+    renderTrace(["Error en la consulta"]);
+    setGraphStatus("idle", "-");
+    resetGraph();
   } finally {
     sendButton.disabled = false;
   }
