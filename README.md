@@ -51,6 +51,8 @@ Query → Selection Function → Neo4j Execution → LLM Response
 
 ```
 final/
+├── Notebooks/
+│   └── Aplicación/
 ├── notebooks/
 │   ├── pipeline_transaccional_neo4j.ipynb
 │   └── kg_query_pipeline.ipynb

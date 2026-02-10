@@ -216,20 +216,11 @@ def seleccionar_funcion(query: str):
     has_stock = any(k in q for k in stock_keywords)
     has_customer = any(k in q for k in customer_keywords)
 
-    if has_customer:
-        return ("consultar_clientes", 1.0, "keyword:clientes")
-    # Si hay stock y no hay producto específico, ir a stock
-    if has_stock and not has_specific_product and not has_vendor:
-        return ("verificar_stock", 1.0, "keyword:stock")
-    # Priorizar producto si hay intención de producto específica
-    if has_product and not has_vendor:
-        return ("buscar_producto", 1.0, "keyword:producto")
-    if has_vendor and not has_product:
-        return ("buscar_vendedor", 1.0, "keyword:vendedor")
-    if has_stock:
-        return ("verificar_stock", 1.0, "keyword:stock")
+    # Selección semántica (LangChain preferido)
+    semantic_func = "buscar_producto"
+    semantic_sim = 0.5
+    semantic_route = "fallback:default"
 
-    # Si LangChain está disponible, usar embeddings semánticos
     if langchain_embedder:
         emb = langchain_embedder.embed_query(query)
         scores = []
@@ -237,7 +228,8 @@ def seleccionar_funcion(query: str):
             sim = float(cosine_similarity([emb], [f["embedding"]])[0][0])
             scores.append((f["nombre_funcion"], sim))
         scores.sort(key=lambda x: x[1], reverse=True)
-        return (scores[0][0], scores[0][1], "embedding:langchain")
+        semantic_func, semantic_sim = scores[0]
+        semantic_route = "embedding:langchain"
     elif embedder:
         emb = embedder.encode(query)
         scores = []
@@ -245,10 +237,26 @@ def seleccionar_funcion(query: str):
             sim = float(cosine_similarity([emb], [f["embedding"]])[0][0])
             scores.append((f["nombre_funcion"], sim))
         scores.sort(key=lambda x: x[1], reverse=True)
-        return (scores[0][0], scores[0][1], "embedding:sentence-transformers")
-    else:
-        # Fallback: retornar función por defecto con baja similitud
-        return ("buscar_producto", 0.5, "fallback:default")
+        semantic_func, semantic_sim = scores[0]
+        semantic_route = "embedding:sentence-transformers"
+
+    # Heurística de intención (override con trazabilidad)
+    heuristic_func = None
+    if has_customer:
+        heuristic_func = "consultar_clientes"
+    elif has_stock and not has_specific_product and not has_vendor:
+        heuristic_func = "verificar_stock"
+    elif has_product and not has_vendor:
+        heuristic_func = "buscar_producto"
+    elif has_vendor and not has_product:
+        heuristic_func = "buscar_vendedor"
+    elif has_stock:
+        heuristic_func = "verificar_stock"
+
+    if heuristic_func:
+        return (heuristic_func, 1.0, f"heuristic:{heuristic_func}|{semantic_route}")
+
+    return (semantic_func, semantic_sim, semantic_route)
 
 
 def run_query(cypher: str, params=None):
@@ -795,12 +803,13 @@ def query(req: QueryRequest):
     smalltalk = detect_smalltalk(req.query)
     if smalltalk:
         log_step(logs, "step: smalltalk")
+        log_step(logs, "output: solicitud exitosa (smalltalk)")
         return {
             "query": req.query,
             "function": "smalltalk",
             "similitud": 1.0,
             "results": [],
-            "answer": smalltalk,
+            "answer": f"Solicitud exitosa. {smalltalk}",
             "action": "smalltalk",
             "cart_items": [],
             "logs": logs,
@@ -814,7 +823,9 @@ def query(req: QueryRequest):
         log_step(logs, "step: plan -> buscar_producto() -> agregar_carrito()")
         plan = build_plan("buscar_producto", has_order=True)
         run_plan_with_langgraph(plan, req.query, logs)
-        answer = f"Agregué {cantidad} unidad(es) de {producto} al carrito."
+        log_step(logs, "log: plan ejecutado")
+        answer = f"Solicitud exitosa. Agregué {cantidad} unidad(es) de {producto} al carrito."
+        log_step(logs, "output: solicitud exitosa (carrito)")
         return {
             "query": req.query,
             "function": "agregar_carrito",
@@ -833,6 +844,7 @@ def query(req: QueryRequest):
     plan = build_plan(funcion)
     log_step(logs, f"plan: {plan}")
     run_plan_with_langgraph(plan, req.query, logs)
+    log_step(logs, "log: plan ejecutado")
 
     if funcion == "buscar_producto":
         results = buscar_producto(req.query)
@@ -846,8 +858,10 @@ def query(req: QueryRequest):
     answer = generar_respuesta(req.query, funcion, results, logs=logs)
     if results:
         answer = f"Solicitud exitosa. {answer}"
+        log_step(logs, "output: solicitud exitosa")
     else:
         answer = f"Solicitud fallida. {answer}"
+        log_step(logs, "output: solicitud fallida")
 
     return {
         "query": req.query,
